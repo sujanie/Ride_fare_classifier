@@ -83,9 +83,7 @@ def cleanData(data, dropcols):
     data['haversine_dist'] = haversine_array(data['pick_lat'].values, data['pick_lon'].values,
                                          data['drop_lat'].values, data['drop_lon'].values)
 
-    #data['add_fare']=data['meter_waiting_till_pickup'/data['additional_fare']
-    #data['diff']=np.abs(data['total_time']-data['duration'])]
-    print(data['total_time'])
+    
     data.drop(dropcols, axis=1, inplace=True)
     imp = IterativeImputer(RandomForestRegressor(n_estimators=5), max_iter=5, random_state=1)
     to_train = ['meter_waiting', 'meter_waiting_fare', 'meter_waiting_till_pickup','fare']
@@ -94,16 +92,10 @@ def cleanData(data, dropcols):
         mode_df = round(data[k].mode()[0])
         mode_df = round(data[k].mean())
         data[k]=data[k].fillna(mode_df)
-    #data[to_train] = pd.DataFrame(imp.fit_transform(data[to_train]), columns=to_train)
+   
     data['manhattan_dist'] = np.log1p(data['manhattan_dist'])
     data['meter_waiting_fare'] = np.log1p(data['meter_waiting_fare'])
-    #sns.distplot(data['meter_waiting_fare'])
-    #plt.title("meter_waiting_fare")
-   # plt.savefig("hist_trans3.png")
-    #sns.distplot(data['manhattan_dist'])
-    #plt.title("manhattan_dist")
-   # plt.savefig("hist_trans4.png")
-    #plt.show()
+    
     data=poly_transform(data)
     return data
 
@@ -174,21 +166,16 @@ dataset['label']=dataset['label'].map(map_target)
 y = dataset['label']
 X = cleanData(dataset, ['pickup_time', 'drop_time', 'label', 'pickup_year', 'drop_year', 'pickup_month', 'drop_month','drop_hour'])
 X = X.iloc[:, 1:27].values
-print( X[4])
 
-#imputer = SimpleImputer(missing_values=np.nan, strategy='mean')
-#imputer = imputer.fit(X[:, 0:20])
-#X[:, 0:20] = imputer.transform(X[:, 0:20])
 # fit model no training data
 ftwo_scorer = make_scorer(fbeta_score, average='macro',beta=1)
 gnb =XGBClassifier(learning_rate =0.15, n_estimators=300, max_depth=9,
  min_child_weight=1, gamma=0, subsample=0.9, colsample_bytree=0.75,
 objective='binary:logistic', nthread=4,  seed=27,reg_alpha= 1,
 eval_metric=["auc","error"],max_delta_step=0,tree_method='approx',reg_lambda=1.0,sketch_eps= 0.001,validate_parameters=True)
-#subsample=0.85, colsample_bytree=0.75 rate=0.3 depyh 9
-#gnb=BaggingClassifier(n_estimators=150,random_state=27)
+
 skf = StratifiedKFold(n_splits=10,random_state=1020, shuffle=True)
-#skf = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
+
 scores=[]
 mscores=[]
 for train_index, test_index in skf.split(X, y):
@@ -196,10 +183,10 @@ for train_index, test_index in skf.split(X, y):
     print("Test Index: ", test_index)
 
     X_train, X_test, y_train, y_test = X[train_index], X[test_index], y[train_index], y[test_index]
-    # X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+   
 
     gnb.fit(X_train, y_train,early_stopping_rounds=100, eval_set=[(X_test, y_test)],verbose=True)
-    #gnb.fit(X_train, y_train)
+    
     f1 = fbeta_score(y_train, gnb.predict(X_train) , average='macro', beta=1)
     y_pred2 = gnb.predict(X_test)
 
